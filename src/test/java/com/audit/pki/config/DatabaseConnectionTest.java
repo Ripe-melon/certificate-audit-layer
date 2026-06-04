@@ -1,6 +1,9 @@
-package com.audit.pki.repos;
+package com.audit.pki.config;
 
 import org.junit.jupiter.api.Test;
+
+import com.audit.pki.config.Database;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -12,7 +15,7 @@ class DatabaseConnectionTest {
     @Test
     void testDatabaseConnectionIsValid() throws SQLException {
         // Act: Attempt to get the connection
-        Connection connection = DatabaseConnection.getInstance().getConnection();
+        Connection connection = Database.getInstance().getConnection();
 
         // Assert: Verify it is not null
         assertNotNull(connection, "Connection should not be null");
