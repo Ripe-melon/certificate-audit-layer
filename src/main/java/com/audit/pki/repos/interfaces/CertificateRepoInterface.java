@@ -8,22 +8,28 @@ public interface CertificateRepoInterface {
 
      void saveCertificate(Certificate certificate) throws Exception;
 
-     Certificate getCertificateById(String id);
+     Certificate getCertificateById(String id) throws Exception;
 
-     Certificate getCertificateBySerialNumber(String serialNumber);
+     Certificate getCertificateBySerialNumber(String serialNumber) throws Exception;
 
-     Certificate getCertificateByThumbprint(String thumbprintSha256);
+     Certificate getCertificateByThumbprint(String thumbprintSha256) throws Exception;
 
-     List<String> getCertificateExtendedKeyUsage(String id);
+     boolean existsByThumbprint(String thumbprintSha256) throws Exception;
 
-     List<Certificate> getAllCertificates();
+     List<Certificate> getCertificatesByIssuerDn(String issuerDn) throws Exception;
 
-     List<Certificate> getCertificatesByAuditStatus(String auditStatus);
+     List<Certificate> getCertificatesByDomain(String domain) throws Exception;
 
-     List<Certificate> getCertificatesExpiringWithinDays(int days);
+     List<String> getCertificateExtendedKeyUsage(String id) throws Exception;
 
-     void updateCertificate(Certificate certificate);
+     List<Certificate> getAllCertificates() throws Exception;
 
-     void deleteCertificate(String id);
+     List<Certificate> getCertificatesByAuditStatus(String auditStatus) throws Exception;
+
+     List<Certificate> getCertificatesExpiringWithinDays(int days) throws Exception;
+
+     int updateCertificate(String id, Certificate certificate) throws Exception;
+
+     int deleteCertificate(String id) throws Exception;
 
 }

@@ -1,65 +1,133 @@
 package com.audit.pki.repos;
 
-import org.junit.jupiter.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.audit.pki.repos.interfaces.CertificateRepoInterface;
-import com.audit.pki.repos.implementations.CertificateRepository;
-import com.audit.pki.config.Database;
+import com.audit.pki.config.DatabaseConnectionManager;
 import com.audit.pki.models.Certificate;
+import com.audit.pki.repos.implementations.CertificateRepository;
+import org.junit.jupiter.api.*;
 
+import java.sql.SQLException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.Instant;
-
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class CertificateRepositoryTest {
 
-    private CertificateRepoInterface certificateRepository;
+    private static CertificateRepository repository;
+    private static Certificate testCert;
+    private static DatabaseConnectionManager db;
+    private static String certIdString;
 
-    @BeforeEach
-    void setUp() {
-        Database db = Database.getInstance();
-        certificateRepository = new CertificateRepository(db);
-    }
+    @BeforeAll
+    static void setUpAll() throws Exception {
+        // Initialize your database connection manager here.
+        // Assuming Database is an interface or class you've created
 
-    @Test
-    void testSaveCertificate() throws Exception {
+        db = new DatabaseConnectionManager("jdbc:postgresql://localhost:5432/pki_audit",
+                "audit_admin", "secure_password");
+        repository = new CertificateRepository(db);
 
-        Certificate testCert = new Certificate(
-                "1234567890ABCDEF",
-                "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2",
-                "CN=test.example.com, O=Audit Corp, C=SE",
-                "CN=Example Root CA, O=Example Trust, C=US",
-                List.of("test.example.com", "www.test.example.com"),
+        db.getConnection().prepareStatement("DELETE FROM certificates WHERE serial_number = 'TEST-SERIAL-001'").executeUpdate();
+
+        // Create a single test certificate to use across all tests
+        testCert = new Certificate(
+                "TEST-SERIAL-001",
+                "abc123thumbprintsha256",
+                "CN=test.domain.com, O=Audit",
+                "CN=Test CA, O=Test",
+                List.of("test.domain.com", "api.domain.com"),
                 Instant.now(),
-                Instant.now().plus(365, java.time.temporal.ChronoUnit.DAYS),
+                Instant.now().plus(30, ChronoUnit.DAYS),
                 "SHA256withRSA",
                 "RSA",
                 2048,
                 List.of("serverAuth", "clientAuth"),
-                "-----BEGIN CERTIFICATE-----\nMIID...[test_raw_base64]...\n-----END CERTIFICATE-----");
+                "-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----");
+        certIdString = testCert.getId().toString();
+    }
+    
 
-        // Act
-        certificateRepository.saveCertificate(testCert);
+    @Test
+    @Order(1)
+    void testSaveCertificate() {
+        assertDoesNotThrow(() -> repository.saveCertificate(testCert), "Saving should not throw an exception");
+    }
 
-        // Assert - Verify via raw JDBC since findById() doesn't exist yet
-        Connection conn = Database.getInstance().getConnection();
-        String sql = "SELECT COUNT(*) FROM certificates WHERE id = ?";
+    @Test
+    @Order(2)
+    void testGettersAndExistence() throws SQLException {
+        // Test ID lookup
+        Certificate byId = repository.getCertificateById(certIdString);
+        assertNotNull(byId);
+        assertEquals("TEST-SERIAL-001", byId.getSerialNumber());
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            // Passing the UUID directly; the JDBC driver handles the Postgres UUID mapping
-            stmt.setObject(1, testCert.getId());
-            ResultSet rs = stmt.executeQuery();
+        // Test Serial lookup
+        Certificate bySerial = repository.getCertificateBySerialNumber("TEST-SERIAL-001");
+        assertNotNull(bySerial);
 
-            assertTrue(rs.next(), "Result set should not be empty");
-            assertEquals(1, rs.getInt(1), "Exactly one row should exist with the given UUID");
-        }
+        // Test Thumbprint lookup
+        Certificate byThumb = repository.getCertificateByThumbprint("abc123thumbprintsha256");
+        assertNotNull(byThumb);
+
+        // Test Exists
+        assertTrue(repository.existsByThumbprint("abc123thumbprintsha256"));
+        assertFalse(repository.existsByThumbprint("fake-thumbprint"));
+    }
+
+    @Test
+    @Order(3)
+    void testListQueries() throws SQLException {
+        // Test Issuer
+        List<Certificate> byIssuer = repository.getCertificatesByIssuerDn("CN=Test CA, O=Test");
+        assertFalse(byIssuer.isEmpty());
+
+        // Test Domain (JSONB @> operator)
+        List<Certificate> byDomain = repository.getCertificatesByDomain("api.domain.com");
+        assertFalse(byDomain.isEmpty());
+
+        // Test Extended Key Usage
+        List<String> eku = repository.getCertificateExtendedKeyUsage(certIdString);
+        assertTrue(eku.contains("serverAuth"));
+
+        // Test Audit Status
+        List<Certificate> byStatus = repository.getCertificatesByAuditStatus("UNAUDITED");
+        assertFalse(byStatus.isEmpty());
+
+        // Test Expiration (Within 40 days, should catch our 30-day cert)
+        List<Certificate> expiring = repository.getCertificatesExpiringWithinDays(40);
+        assertFalse(expiring.isEmpty());
+
+        // Test Get All
+        List<Certificate> all = repository.getAllCertificates();
+        assertFalse(all.isEmpty());
+    }
+
+    @Test
+    @Order(4)
+    void testUpdateCertificate() throws SQLException {
+        // Mutate the state
+        testCert.setRevoked(true);
+        testCert.setAuditStatus("COMPLIANT");
+
+        int rows = repository.updateCertificate(certIdString, testCert);
+        assertEquals(1, rows, "One row should be updated");
+
+        // Verify the update took place
+        Certificate updated = repository.getCertificateById(certIdString);
+        assertTrue(updated.isRevoked());
+        assertEquals("COMPLIANT", updated.getAuditStatus());
+    }
+
+    @Test
+    @Order(5)
+    void testDeleteCertificate() throws SQLException {
+        int rows = repository.deleteCertificate(certIdString);
+        assertEquals(1, rows, "One row should be deleted");
+
+        // Verify it's gone
+        Certificate deleted = repository.getCertificateById(certIdString);
+        assertNull(deleted, "Certificate should no longer exist in the database");
     }
 }
