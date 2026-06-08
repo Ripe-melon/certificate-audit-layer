@@ -29,7 +29,8 @@ class CertificateRepositoryTest {
                 "audit_admin", "secure_password");
         repository = new CertificateRepository(db);
 
-        db.getConnection().prepareStatement("DELETE FROM certificates WHERE serial_number = 'TEST-SERIAL-001'").executeUpdate();
+        db.getConnection().prepareStatement("DELETE FROM certificates WHERE serial_number = 'TEST-SERIAL-001'")
+                .executeUpdate();
 
         // Create a single test certificate to use across all tests
         testCert = new Certificate(
@@ -47,7 +48,6 @@ class CertificateRepositoryTest {
                 "-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----");
         certIdString = testCert.getId().toString();
     }
-    
 
     @Test
     @Order(1)
