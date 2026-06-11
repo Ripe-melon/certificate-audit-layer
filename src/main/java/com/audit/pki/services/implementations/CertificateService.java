@@ -16,6 +16,9 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.MessageDigest;
+import java.security.PublicKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.List;
 
@@ -96,9 +99,11 @@ public class CertificateService implements CertificateServiceInterface {
         return null;
     }
 
-    private int getKeySize(java.security.PublicKey publicKey) {
-        // Implementation for determining key size based on algorithm
-        return 0;
+    private int getKeySize(PublicKey publicKey) {
+        if (publicKey instanceof RSAPublicKey rsaKey)
+            return rsaKey.getModulus().bitLength();
+        else
+            throw new CertificateValidationException("Unsupported key type: " + publicKey.getAlgorithm());
     }
 
     private List<String> extractExtendedKeyUsages(X509Certificate cert) {

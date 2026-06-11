@@ -30,15 +30,32 @@ public class CertificateServiceTest {
     @Test
     public void testIngestCertificate_CalculatesCorrectThumbprint() throws Exception {
         // Arrange: Load the certificate bytes straight from the root directory
-        byte[] testCertBytes = Files.readAllBytes(Paths.get("google_cert.pem"));
+        byte[] testCertBytes = Files.readAllBytes(Paths.get("test_rsa_cert.pem"));
 
-        // Put your expected SHA-256 string here (see how to find it below)
-        String expectedThumbprint = "33acfffd205bca23b2515985f85ba6a477f1302f8534b31029f276a5e016dfe8";
+        String expectedThumbprint = "2490D76C817294C04668BCD18809F3B43175A37E56B823E610CB57667EDF8211".toLowerCase();
+
         // Act: Run the public method
         Certificate result = certificateService.ingestCertificate(testCertBytes);
 
         // Assert: Verify the private helper did its job during the pipeline
         assertNotNull(result);
         assertEquals(expectedThumbprint, result.getThumbprintSha256());
+    }
+
+    @Test
+    public void testIngestCertificate_ExtractsCorrectKeySize() throws Exception {
+        // Arrange: Load the same Google certificate bytes
+        byte[] testCertBytes = Files.readAllBytes(Paths.get("test_rsa_cert.pem"));
+
+        // Act: Run the public orchestration method
+        Certificate result = certificateService.ingestCertificate(testCertBytes);
+
+        // Assert: Verify the domain model was populated with the correct integer
+        assertNotNull(result, "The returned certificate should not be null.");
+
+        // Replace 2048 with the actual key size of your downloaded certificate!
+        int expectedKeySize = 2048;
+        assertEquals(expectedKeySize, result.getKeySize(),
+                "The extracted key size did not match the expected bit length.");
     }
 }
