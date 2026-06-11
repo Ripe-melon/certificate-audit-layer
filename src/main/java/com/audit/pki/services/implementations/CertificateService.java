@@ -38,7 +38,7 @@ public class CertificateService implements CertificateServiceInterface {
         try {
             Certificate auditedCertificate = new Certificate(
                     x509.getSerialNumber().toString(), // Extracting Serial
-                    calculateSha256Thumbprint(x509.getEncoded()), // Extracting Thumbprint
+                    CertificateExtractor.calculateSha256Thumbprint(x509.getEncoded()), // Extracting Thumbprint
                     x509.getSubjectX500Principal().getName(), // Extracting Subject DN
                     x509.getIssuerX500Principal().getName(), // Extracting Issuer DN
                     CertificateExtractor.extractSanList(x509), // Extracting SANs (Helper needed)
@@ -47,7 +47,7 @@ public class CertificateService implements CertificateServiceInterface {
                     x509.getSigAlgName(), // Extracting Signature Algorithm
                     x509.getPublicKey().getAlgorithm(), // Extracting Key Algorithm
                     CertificateExtractor.getKeySize(x509.getPublicKey()), // Extracting Key Size (Helper needed)
-                    extractExtendedKeyUsages(x509), // Extracting EKUs (Helper needed)
+                    CertificateExtractor.extractExtendedKeyUsages(x509), // Extracting EKUs (Helper needed)
                     Base64.getEncoder().encodeToString(rawCertBytes) // Raw String representation
             );
             return auditedCertificate;
@@ -78,33 +78,4 @@ public class CertificateService implements CertificateServiceInterface {
         }
     }
 
-    private String calculateSha256Thumbprint(byte[] certBytes) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(certBytes);
-
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hashBytes) {
-                // "%02x" forces each byte to be represented as 2 lowercase hex digits
-                hexString.append(String.format("%02x", b));
-            }
-            String thumbprint = hexString.toString();
-
-            return thumbprint;
-        } catch (NoSuchAlgorithmException e) {
-            throw new CertificateValidationException("Invalid Algorithm.");
-        }
-    }
-
-    private int getKeySize(PublicKey publicKey) {
-        if (publicKey instanceof RSAPublicKey rsaKey)
-            return rsaKey.getModulus().bitLength();
-        else
-            throw new CertificateValidationException("Unsupported key type: " + publicKey.getAlgorithm());
-    }
-
-    private List<String> extractExtendedKeyUsages(X509Certificate cert) {
-        // Implementation for extracting Extended Key Usages
-        return null;
-    }
 }

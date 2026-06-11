@@ -103,4 +103,35 @@ public class CertificateExtractor {
                     "Unsupported key type: " + publicKey.getAlgorithm() + ". Only RSA is currently supported.");
         }
     }
+
+    /**
+     * Extracts the Extended Key Usages (EKUs) from the certificate.
+     * EKUs define the approved purposes for the certificate (e.g., Server
+     * Authentication).
+     * Note: This returns raw Object Identifiers (OIDs), such as
+     * "1.3.6.1.5.5.7.3.1".
+     *
+     * @param cert The native X509Certificate to parse.
+     * @return A list of EKU OID strings, or an empty list if no extension is
+     *         present.
+     * @throws CertificateParsingException If the EKU extension cannot be parsed.
+     */
+    public static List<String> extractExtendedKeyUsages(X509Certificate cert) {
+        try {
+            // The native method returns a List of OID strings directly
+            List<String> ekus = cert.getExtendedKeyUsage();
+
+            // If the certificate lacks this specific extension, Java returns null.
+            // We return an empty list to ensure safe database insertion.
+            if (ekus == null) {
+                return new ArrayList<>();
+            }
+
+            // Return a defensive copy to prevent external mutation of the extracted list
+            return new ArrayList<>(ekus);
+
+        } catch (java.security.cert.CertificateParsingException e) {
+            throw new CertificateParsingException("Failed to parse Extended Key Usages from certificate.", e);
+        }
+    }
 }
