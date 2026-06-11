@@ -5,6 +5,7 @@ import com.audit.pki.repos.implementations.CertificateRepository;
 import com.audit.pki.services.interfaces.CertificateServiceInterface;
 
 import com.audit.pki.shared.exceptions.*;
+import com.audit.pki.shared.utils.CertificateExtractor;
 
 import java.util.UUID;
 import java.io.ByteArrayInputStream;
@@ -17,10 +18,11 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.MessageDigest;
 import java.security.PublicKey;
-import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.List;
+import java.util.ArrayList;
 
 public class CertificateService implements CertificateServiceInterface {
 
@@ -39,12 +41,12 @@ public class CertificateService implements CertificateServiceInterface {
                     calculateSha256Thumbprint(x509.getEncoded()), // Extracting Thumbprint
                     x509.getSubjectX500Principal().getName(), // Extracting Subject DN
                     x509.getIssuerX500Principal().getName(), // Extracting Issuer DN
-                    extractSanList(x509), // Extracting SANs (Helper needed)
+                    CertificateExtractor.extractSanList(x509), // Extracting SANs (Helper needed)
                     x509.getNotBefore().toInstant(), // Extracting Valid From
                     x509.getNotAfter().toInstant(), // Extracting Valid To
                     x509.getSigAlgName(), // Extracting Signature Algorithm
                     x509.getPublicKey().getAlgorithm(), // Extracting Key Algorithm
-                    getKeySize(x509.getPublicKey()), // Extracting Key Size (Helper needed)
+                    CertificateExtractor.getKeySize(x509.getPublicKey()), // Extracting Key Size (Helper needed)
                     extractExtendedKeyUsages(x509), // Extracting EKUs (Helper needed)
                     Base64.getEncoder().encodeToString(rawCertBytes) // Raw String representation
             );
@@ -92,11 +94,6 @@ public class CertificateService implements CertificateServiceInterface {
         } catch (NoSuchAlgorithmException e) {
             throw new CertificateValidationException("Invalid Algorithm.");
         }
-    }
-
-    private List<String> extractSanList(X509Certificate cert) {
-        // Implementation for extracting Subject Alternative Names
-        return null;
     }
 
     private int getKeySize(PublicKey publicKey) {

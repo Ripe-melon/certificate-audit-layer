@@ -58,4 +58,5 @@ public class CertificateServiceTest {
         assertEquals(expectedKeySize, result.getKeySize(),
                 "The extracted key size did not match the expected bit length.");
     }
+
 }
