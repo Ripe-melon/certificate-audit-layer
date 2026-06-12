@@ -8,12 +8,12 @@ package com.audit.pki.shared.exceptions;
  * or malformed PEM/DER byte arrays at the ingestion layer.
  * </p>
  */
-public class CertificateParsingException extends CertificateAuditException {
-    public CertificateParsingException(String message) {
+public class AuditParsingException extends CertificateAuditException {
+    public AuditParsingException(String message) {
         super("Failed to parse X.509 certificate: " + message);
     }
 
-    public CertificateParsingException(String message, Throwable cause) {
+    public AuditParsingException(String message, Throwable cause) {
         super("Failed to parse X.509 certificate: " + message, cause);
     }
 }

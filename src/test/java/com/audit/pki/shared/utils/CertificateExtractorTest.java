@@ -3,15 +3,15 @@ package com.audit.pki.shared.utils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.util.List;
 
 public class CertificateExtractorTest {
 
@@ -58,5 +58,18 @@ public class CertificateExtractorTest {
         // Assert
         assertEquals(expectedKeySize, actualKeySize,
                 "The extracted RSA key size did not match the expected 2048 bits.");
+    }
+
+    @Test
+    public void testExtractExtendedKeyUsages_HandlesCertWithoutEkus() {
+        // Act: Extract the EKUs from our pre-loaded test certificate
+        List<String> actualEkus = CertificateExtractor.extractExtendedKeyUsages(x509Cert);
+
+        // Assert:
+        // 1. Verify our method caught the null and returned an actual list object
+        assertNotNull(actualEkus, "The returned list should not be null to prevent database crashes.");
+
+        // 2. Verify the list is empty, accurately reflecting our basic test certificate
+        assertTrue(actualEkus.isEmpty(), "The basic OpenSSL test certificate should not contain any EKUs.");
     }
 }

@@ -2,6 +2,7 @@
 package com.audit.pki.repos.implementations;
 
 import com.audit.pki.repos.interfaces.CertificateRepoInterface;
+import com.audit.pki.shared.exceptions.DatabaseOperationException;
 import com.audit.pki.models.Certificate;
 import com.audit.pki.config.DatabaseConnectionManager;
 import com.google.gson.Gson;
@@ -46,7 +47,7 @@ public class CertificateRepository implements CertificateRepoInterface {
      * Saves a new certificate to the database.
      */
     @Override
-    public void saveCertificate(Certificate certificate) throws SQLException {
+    public void saveCertificate(Certificate certificate) {
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
                         "INSERT INTO certificates (id, serial_number, thumbprint_sha256, subject_dn, issuer_dn, san_list, valid_from, valid_to, signature_algorithm, key_algorithm, key_size, extended_key_usage, is_revoked, raw_certificate, audit_status) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)")) {
@@ -68,6 +69,9 @@ public class CertificateRepository implements CertificateRepoInterface {
             stmt.setString(15, certificate.getAuditStatus());
 
             stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new DatabaseOperationException(
+                    "Failed to save certificate with thumbprint: " + certificate.getThumbprintSha256(), e);
         }
     }
 

@@ -1,6 +1,6 @@
 package com.audit.pki.shared.utils;
 
-import com.audit.pki.shared.exceptions.CertificateParsingException;
+import com.audit.pki.shared.exceptions.AuditParsingException;
 import com.audit.pki.shared.exceptions.CertificateValidationException;
 
 import java.security.MessageDigest;
@@ -20,7 +20,7 @@ public class CertificateExtractor {
      * * @param cert The native X509Certificate to parse.
      * 
      * @return A list of extracted domain names, or an empty list if none exist.
-     * @throws CertificateParsingException If the SANs cannot be parsed from the
+     * @throws AuditParsingException If the SANs cannot be parsed from the
      *                                     certificate.
      */
     public static List<String> extractSanList(X509Certificate cert) {
@@ -43,7 +43,7 @@ public class CertificateExtractor {
                 }
             }
         } catch (java.security.cert.CertificateParsingException e) {
-            throw new CertificateParsingException("Failed to parse SANs from certificate.", e);
+            throw new AuditParsingException("Failed to parse SANs from certificate.", e);
         }
         return sanList;
     }
@@ -114,7 +114,7 @@ public class CertificateExtractor {
      * @param cert The native X509Certificate to parse.
      * @return A list of EKU OID strings, or an empty list if no extension is
      *         present.
-     * @throws CertificateParsingException If the EKU extension cannot be parsed.
+     * @throws AuditParsingException If the EKU extension cannot be parsed.
      */
     public static List<String> extractExtendedKeyUsages(X509Certificate cert) {
         try {
@@ -131,7 +131,7 @@ public class CertificateExtractor {
             return new ArrayList<>(ekus);
 
         } catch (java.security.cert.CertificateParsingException e) {
-            throw new CertificateParsingException("Failed to parse Extended Key Usages from certificate.", e);
+            throw new AuditParsingException("Failed to parse Extended Key Usages from certificate.", e);
         }
     }
 }

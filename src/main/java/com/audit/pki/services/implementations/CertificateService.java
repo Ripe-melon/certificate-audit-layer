@@ -19,6 +19,7 @@ import java.security.cert.X509Certificate;
 import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.sql.SQLException;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
@@ -50,10 +51,12 @@ public class CertificateService implements CertificateServiceInterface {
                     CertificateExtractor.extractExtendedKeyUsages(x509), // Extracting EKUs (Helper needed)
                     Base64.getEncoder().encodeToString(rawCertBytes) // Raw String representation
             );
+            certificateRepository.saveCertificate(auditedCertificate);
             return auditedCertificate;
         } catch (CertificateEncodingException e) {
-            throw new CertificateParsingException("Failed to encode certificate for auditing.", e);
+            throw new AuditParsingException("Failed to encode certificate for auditing.", e);
         }
+
     }
 
     @Override
@@ -74,7 +77,7 @@ public class CertificateService implements CertificateServiceInterface {
             CertificateFactory factory = CertificateFactory.getInstance("X.509");
             return (X509Certificate) factory.generateCertificate(stream);
         } catch (CertificateException | IOException e) {
-            throw new CertificateParsingException("Invalid certificate format", e);
+            throw new AuditParsingException("Invalid certificate format", e);
         }
     }
 
