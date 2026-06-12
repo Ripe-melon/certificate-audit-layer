@@ -1,4 +1,3 @@
-
 package com.audit.pki.repos.implementations;
 
 import com.audit.pki.repos.interfaces.CertificateRepoInterface;
@@ -76,7 +75,7 @@ public class CertificateRepository implements CertificateRepoInterface {
     }
 
     @Override
-    public Certificate getCertificateById(String id) throws SQLException {
+    public Certificate getCertificateById(String id) {
         Certificate cert = null;
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("SELECT * FROM certificates WHERE id = ?")) {
@@ -86,12 +85,14 @@ public class CertificateRepository implements CertificateRepoInterface {
                     cert = mapRowToCertificate(rs);
                 }
             }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to retrieve certificate with id: " + id, e);
         }
         return cert;
     }
 
     @Override
-    public Certificate getCertificateBySerialNumber(String serialNumber) throws SQLException {
+    public Certificate getCertificateBySerialNumber(String serialNumber) {
         Certificate cert = null;
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("SELECT * FROM certificates WHERE serial_number = ?")) {
@@ -101,12 +102,14 @@ public class CertificateRepository implements CertificateRepoInterface {
                     cert = mapRowToCertificate(rs);
                 }
             }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to retrieve certificate with serial number: " + serialNumber, e);
         }
         return cert;
     }
 
     @Override
-    public Certificate getCertificateByThumbprint(String thumbprintSha256) throws SQLException {
+    public Certificate getCertificateByThumbprint(String thumbprintSha256) {
         Certificate cert = null;
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn
@@ -117,12 +120,14 @@ public class CertificateRepository implements CertificateRepoInterface {
                     cert = mapRowToCertificate(rs);
                 }
             }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to retrieve certificate with thumbprint: " + thumbprintSha256, e);
         }
         return cert;
     }
 
     @Override
-    public boolean existsByThumbprint(String thumbprintSha256) throws SQLException {
+    public boolean existsByThumbprint(String thumbprintSha256) {
         boolean exists = false;
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn
@@ -133,12 +138,14 @@ public class CertificateRepository implements CertificateRepoInterface {
                     exists = rs.getBoolean(1);
                 }
             }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to check existence for certificate with thumbprint: " + thumbprintSha256, e);
         }
         return exists;
     }
 
     @Override
-    public List<Certificate> getCertificatesByIssuerDn(String issuerDn) throws SQLException {
+    public List<Certificate> getCertificatesByIssuerDn(String issuerDn) {
         List<Certificate> certificates = new ArrayList<>();
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("SELECT * FROM certificates WHERE issuer_dn = ?")) {
@@ -148,12 +155,14 @@ public class CertificateRepository implements CertificateRepoInterface {
                     certificates.add(mapRowToCertificate(rs));
                 }
             }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to retrieve certificates with issuer DN: " + issuerDn, e);
         }
         return certificates;
     }
 
     @Override
-    public List<Certificate> getCertificatesByDomain(String domain) throws SQLException {
+    public List<Certificate> getCertificatesByDomain(String domain) {
         List<Certificate> certificates = new ArrayList<>();
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
@@ -165,12 +174,14 @@ public class CertificateRepository implements CertificateRepoInterface {
                     certificates.add(mapRowToCertificate(rs));
                 }
             }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to retrieve certificates with domain: " + domain, e);
         }
         return certificates;
     }
 
     @Override
-    public List<String> getCertificateExtendedKeyUsage(String id) throws SQLException {
+    public List<String> getCertificateExtendedKeyUsage(String id) {
         List<String> extendedKeyUsages = new ArrayList<>();
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn
@@ -181,12 +192,14 @@ public class CertificateRepository implements CertificateRepoInterface {
                     extendedKeyUsages.addAll(gson.fromJson(rs.getString("extended_key_usage"), listType));
                 }
             }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to retrieve extended key usages for certificate with id: " + id, e);
         }
         return extendedKeyUsages;
     }
 
     @Override
-    public List<Certificate> getAllCertificates() throws SQLException {
+    public List<Certificate> getAllCertificates() {
         List<Certificate> certificates = new ArrayList<>();
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("SELECT * FROM certificates");) {
@@ -195,8 +208,9 @@ public class CertificateRepository implements CertificateRepoInterface {
                     certificates.add(mapRowToCertificate(rs));
                 }
             }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to retrieve all certificates", e);
         }
-
         return certificates;
     }
 
@@ -212,7 +226,7 @@ public class CertificateRepository implements CertificateRepoInterface {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DatabaseOperationException("Failed to retrieve certificates with audit status: " + auditStatus, e);
         }
         return certificates;
     }
@@ -230,13 +244,13 @@ public class CertificateRepository implements CertificateRepoInterface {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DatabaseOperationException("Failed to retrieve certificates expiring within days: " + days, e);
         }
         return certificates;
     }
 
     @Override
-    public int updateCertificate(String id, Certificate certificate) throws SQLException {
+    public int updateCertificate(String id, Certificate certificate) {
         int rowsAffected = 0;
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
@@ -246,17 +260,21 @@ public class CertificateRepository implements CertificateRepoInterface {
             stmt.setObject(3, UUID.fromString(id));
 
             rowsAffected = stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to update certificate with id: " + id, e);
         }
         return rowsAffected;
     }
 
     @Override
-    public int deleteCertificate(String id) throws SQLException {
+    public int deleteCertificate(String id) {
         int rowsAffected = 0;
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM certificates WHERE id = ?")) {
             stmt.setObject(1, UUID.fromString(id));
             rowsAffected = stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to delete certificate with id: " + id, e);
         }
         return rowsAffected;
     }

@@ -6,30 +6,30 @@ import com.audit.pki.models.Certificate;
 
 public interface CertificateRepoInterface {
 
-     void saveCertificate(Certificate certificate) throws Exception;
+     void saveCertificate(Certificate certificate);
 
-     Certificate getCertificateById(String id) throws Exception;
+     Certificate getCertificateById(String id);
 
-     Certificate getCertificateBySerialNumber(String serialNumber) throws Exception;
+     Certificate getCertificateBySerialNumber(String serialNumber);
 
-     Certificate getCertificateByThumbprint(String thumbprintSha256) throws Exception;
+     Certificate getCertificateByThumbprint(String thumbprintSha256);
 
-     boolean existsByThumbprint(String thumbprintSha256) throws Exception;
+     boolean existsByThumbprint(String thumbprintSha256);
 
-     List<Certificate> getCertificatesByIssuerDn(String issuerDn) throws Exception;
+     List<Certificate> getCertificatesByIssuerDn(String issuerDn);
 
-     List<Certificate> getCertificatesByDomain(String domain) throws Exception;
+     List<Certificate> getCertificatesByDomain(String domain);
 
-     List<String> getCertificateExtendedKeyUsage(String id) throws Exception;
+     List<String> getCertificateExtendedKeyUsage(String id);
 
-     List<Certificate> getAllCertificates() throws Exception;
+     List<Certificate> getAllCertificates();
 
-     List<Certificate> getCertificatesByAuditStatus(String auditStatus) throws Exception;
+     List<Certificate> getCertificatesByAuditStatus(String auditStatus);
 
-     List<Certificate> getCertificatesExpiringWithinDays(int days) throws Exception;
+     List<Certificate> getCertificatesExpiringWithinDays(int days);
 
-     int updateCertificate(String id, Certificate certificate) throws Exception;
+     int updateCertificate(String id, Certificate certificate);
 
-     int deleteCertificate(String id) throws Exception;
+     int deleteCertificate(String id);
 
 }
