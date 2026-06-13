@@ -1,6 +1,7 @@
 package com.audit.pki.repos.interfaces;
 
 import java.util.List;
+import java.time.Instant;
 
 import com.audit.pki.models.Certificate;
 
@@ -31,5 +32,7 @@ public interface CertificateRepoInterface {
      int updateCertificate(String id, Certificate certificate);
 
      int deleteCertificate(String id);
+
+     void updateAuditState(String id, String auditStatus, Instant lastAuditedAt);
 
 }

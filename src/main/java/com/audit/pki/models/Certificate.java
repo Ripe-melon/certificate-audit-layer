@@ -27,6 +27,7 @@ public class Certificate {
     private boolean isRevoked;
     private String rawCertificateString;
     private String auditStatus;
+    private Instant lastAuditedAt;
 
     /**
      * Standard constructor for creating a NEW certificate in the application.
@@ -54,6 +55,7 @@ public class Certificate {
         this.isRevoked = false;
         this.rawCertificateString = rawCertificateString;
         this.auditStatus = "UNAUDITED";
+        this.lastAuditedAt = null;
     }
 
     /**
@@ -64,7 +66,7 @@ public class Certificate {
             String issuerDn, List<String> subjectAlternativeNames, Instant validFrom,
             Instant validTo, String signatureAlgorithm, String keyAlgorithm,
             int keySize, List<String> extendedKeyUsages, boolean isRevoked,
-            String rawCertificateString, String auditStatus) {
+            String rawCertificateString, String auditStatus, Instant lastAuditedAt) {
         this.id = id;
         this.serialNumber = serialNumber;
         this.thumbprintSha256 = thumbprintSha256;
@@ -81,6 +83,11 @@ public class Certificate {
         this.isRevoked = isRevoked;
         this.rawCertificateString = rawCertificateString;
         this.auditStatus = auditStatus;
+        this.lastAuditedAt = lastAuditedAt;
+    }
+
+    public Instant getLastAuditedAt() {
+        return lastAuditedAt;
     }
 
     // --- Getters ---
@@ -155,5 +162,9 @@ public class Certificate {
 
     public void setAuditStatus(String auditStatus) {
         this.auditStatus = auditStatus;
+    }
+
+    public void setLastAuditedAt(Instant lastAuditedAt) {
+        this.lastAuditedAt = lastAuditedAt;
     }
 }

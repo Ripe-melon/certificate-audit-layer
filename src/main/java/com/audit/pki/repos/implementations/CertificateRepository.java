@@ -49,7 +49,7 @@ public class CertificateRepository implements CertificateRepoInterface {
     public void saveCertificate(Certificate certificate) {
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "INSERT INTO certificates (id, serial_number, thumbprint_sha256, subject_dn, issuer_dn, san_list, valid_from, valid_to, signature_algorithm, key_algorithm, key_size, extended_key_usage, is_revoked, raw_certificate, audit_status) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)")) {
+                        "INSERT INTO certificates (id, serial_number, thumbprint_sha256, subject_dn, issuer_dn, san_list, valid_from, valid_to, signature_algorithm, key_algorithm, key_size, extended_key_usage, is_revoked, raw_certificate, audit_status, last_audited_at) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?)")) {
 
             stmt.setObject(1, certificate.getId());
             stmt.setString(2, certificate.getSerialNumber());
@@ -66,6 +66,11 @@ public class CertificateRepository implements CertificateRepoInterface {
             stmt.setBoolean(13, certificate.isRevoked());
             stmt.setString(14, certificate.getRawCertificateString());
             stmt.setString(15, certificate.getAuditStatus());
+            if (certificate.getLastAuditedAt() != null) {
+                stmt.setTimestamp(16, java.sql.Timestamp.from(certificate.getLastAuditedAt()));
+            } else {
+                stmt.setNull(16, java.sql.Types.TIMESTAMP);
+            }
 
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -103,7 +108,8 @@ public class CertificateRepository implements CertificateRepoInterface {
                 }
             }
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to retrieve certificate with serial number: " + serialNumber, e);
+            throw new DatabaseOperationException("Failed to retrieve certificate with serial number: " + serialNumber,
+                    e);
         }
         return cert;
     }
@@ -121,7 +127,8 @@ public class CertificateRepository implements CertificateRepoInterface {
                 }
             }
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to retrieve certificate with thumbprint: " + thumbprintSha256, e);
+            throw new DatabaseOperationException("Failed to retrieve certificate with thumbprint: " + thumbprintSha256,
+                    e);
         }
         return cert;
     }
@@ -139,7 +146,8 @@ public class CertificateRepository implements CertificateRepoInterface {
                 }
             }
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to check existence for certificate with thumbprint: " + thumbprintSha256, e);
+            throw new DatabaseOperationException(
+                    "Failed to check existence for certificate with thumbprint: " + thumbprintSha256, e);
         }
         return exists;
     }
@@ -193,7 +201,8 @@ public class CertificateRepository implements CertificateRepoInterface {
                 }
             }
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to retrieve extended key usages for certificate with id: " + id, e);
+            throw new DatabaseOperationException(
+                    "Failed to retrieve extended key usages for certificate with id: " + id, e);
         }
         return extendedKeyUsages;
     }
@@ -226,7 +235,8 @@ public class CertificateRepository implements CertificateRepoInterface {
                 }
             }
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to retrieve certificates with audit status: " + auditStatus, e);
+            throw new DatabaseOperationException("Failed to retrieve certificates with audit status: " + auditStatus,
+                    e);
         }
         return certificates;
     }
@@ -279,6 +289,22 @@ public class CertificateRepository implements CertificateRepoInterface {
         return rowsAffected;
     }
 
+    @Override
+    public void updateAuditState(String id, String auditStatus, Instant lastAuditedAt) {
+        try (Connection conn = db.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(
+                        "UPDATE certificates SET audit_status = ?, last_audited_at = ? WHERE id = ?")) {
+
+            stmt.setString(1, auditStatus);
+            stmt.setTimestamp(2, java.sql.Timestamp.from(lastAuditedAt));
+            stmt.setObject(3, UUID.fromString(id));
+
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to update audit state for certificate id: " + id, e);
+        }
+    }
+
     // Helper method to map a ResultSet row to a Certificate object
     private Certificate mapRowToCertificate(ResultSet rs) throws SQLException {
 
@@ -298,9 +324,12 @@ public class CertificateRepository implements CertificateRepoInterface {
         String rawCertificateString = rs.getString("raw_certificate");
         String auditStatus = rs.getString("audit_status");
 
+        java.sql.Timestamp ts = rs.getTimestamp("last_audited_at");
+        Instant lastAuditedAt = ts != null ? ts.toInstant() : null;
+
         return new Certificate(id, serialNumber, thumbprintSha256, subjectDn, issuerDn, sanList, validFrom, validTo,
                 signatureAlgorithm, keyAlgorithm, keySize, extendedKeyUsage, isRevoked, rawCertificateString,
-                auditStatus);
+                auditStatus, lastAuditedAt);
     }
 
 }
