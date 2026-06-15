@@ -10,13 +10,21 @@ gustaf@Mac certificate-audit-layer % mvn test
 [INFO] Copying 0 resource from src/main/resources to target/classes
 [INFO] 
 [INFO] --- compiler:3.15.0:compile (default-compile) @ certificate-audit-layer ---
-[INFO] Nothing to compile - all classes are up to date.
+[INFO] Recompiling the module because of added or removed source files.
+[INFO] Compiling 22 source files with javac [debug target 21] to target/classes
+[WARNING] location of system modules is not set in conjunction with -source 21
+  not setting the location of system modules may lead to class files that cannot run on JDK 21
+    --release 21 is recommended instead of -source 21 -target 21 because it sets the location of system modules automatically
 [INFO] 
 [INFO] --- resources:3.4.0:testResources (default-testResources) @ certificate-audit-layer ---
 [INFO] skip non existing resourceDirectory /Users/gustaf/Dev/PKI/certificate-audit-layer/src/test/resources
 [INFO] 
 [INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ certificate-audit-layer ---
-[INFO] Nothing to compile - all classes are up to date.
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 5 source files with javac [debug target 21] to target/test-classes
+[WARNING] location of system modules is not set in conjunction with -source 21
+  not setting the location of system modules may lead to class files that cannot run on JDK 21
+    --release 21 is recommended instead of -source 21 -target 21 because it sets the location of system modules automatically
 [INFO] 
 [INFO] --- surefire:3.2.5:test (default-test) @ certificate-audit-layer ---
 [INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
@@ -25,140 +33,32 @@ gustaf@Mac certificate-audit-layer % mvn test
 [INFO]  T E S T S
 [INFO] -------------------------------------------------------
 [INFO] Running com.audit.pki.repos.CertificateRepositoryTest
-[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.266 s -- in com.audit.pki.repos.CertificateRepositoryTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.288 s -- in com.audit.pki.repos.CertificateRepositoryTest
+[INFO] Running com.audit.pki.repos.AuditLogRepositoryTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.047 s -- in com.audit.pki.repos.AuditLogRepositoryTest
 [INFO] Running com.audit.pki.config.DatabaseConnectionTest
 [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in com.audit.pki.config.DatabaseConnectionTest
 [INFO] Running com.audit.pki.shared.utils.CertificateExtractorTest
-[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in com.audit.pki.shared.utils.CertificateExtractorTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in com.audit.pki.shared.utils.CertificateExtractorTest
 [INFO] Running com.audit.pki.services.CertificateServiceTest
 OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
 WARNING: A Java agent has been loaded dynamically (/Users/gustaf/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.12/byte-buddy-agent-1.14.12.jar)
 WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
 WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
 WARNING: Dynamic loading of agents will be disallowed by default in a future release
-[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.333 s <<< FAILURE! -- in com.audit.pki.services.CertificateServiceTest
-[ERROR] com.audit.pki.services.CertificateServiceTest.testIngestCertificate_MapsAndSavesSuccessfully -- Time elapsed: 0.328 s <<< ERROR!
-org.mockito.exceptions.base.MockitoException: 
-
-Mockito cannot mock this class: class com.audit.pki.repos.implementations.CertificateRepository.
-
-If you're not sure why you're getting this error, please open an issue on GitHub.
-
-
-Java               : 25
-JVM vendor name    : Eclipse Adoptium
-JVM vendor version : 25.0.3+9-LTS
-JVM name           : OpenJDK 64-Bit Server VM
-JVM version        : 25.0.3+9-LTS
-JVM info           : mixed mode, sharing
-OS name            : Mac OS X
-OS version         : 15.7.2
-
-
-You are seeing this disclaimer because Mockito is configured to create inlined mocks.
-You can learn about inline mocks and their limitations under item #39 of the Mockito class javadoc.
-
-Underlying exception : org.mockito.exceptions.base.MockitoException: Could not modify all classes [class com.audit.pki.repos.implementations.CertificateRepository, interface com.audit.pki.repos.interfaces.CertificateRepoInterface, class java.lang.Object]
-        at org.mockito.junit.jupiter.MockitoExtension.beforeEach(MockitoExtension.java:160)
-        at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-        at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-        Suppressed: java.lang.NullPointerException: Cannot invoke "java.util.Set.forEach(java.util.function.Consumer)" because the return value of "org.junit.jupiter.api.extension.ExtensionContext$Store.remove(Object, java.lang.Class)" is null
-                at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:194)
-                ... 2 more
-Caused by: org.mockito.exceptions.base.MockitoException: Could not modify all classes [class com.audit.pki.repos.implementations.CertificateRepository, interface com.audit.pki.repos.interfaces.CertificateRepoInterface, class java.lang.Object]
-        at net.bytebuddy.TypeCache.findOrInsert(TypeCache.java:168)
-        at net.bytebuddy.TypeCache$WithInlineExpunction.findOrInsert(TypeCache.java:399)
-        at net.bytebuddy.TypeCache.findOrInsert(TypeCache.java:190)
-        at net.bytebuddy.TypeCache$WithInlineExpunction.findOrInsert(TypeCache.java:410)
-        ... 3 more
-Caused by: java.lang.IllegalStateException: 
-Byte Buddy could not instrument all classes within the mock's type hierarchy
-
-This problem should never occur for javac-compiled classes. This problem has been observed for classes that are:
- - Compiled by older versions of scalac
- - Classes that are part of the Android distribution
-        at org.mockito.internal.creation.bytebuddy.InlineBytecodeGenerator.triggerRetransformation(InlineBytecodeGenerator.java:285)
-        at org.mockito.internal.creation.bytebuddy.InlineBytecodeGenerator.mockClass(InlineBytecodeGenerator.java:218)
-        at org.mockito.internal.creation.bytebuddy.TypeCachingBytecodeGenerator.lambda$mockClass$0(TypeCachingBytecodeGenerator.java:78)
-        at net.bytebuddy.TypeCache.findOrInsert(TypeCache.java:168)
-        at net.bytebuddy.TypeCache$WithInlineExpunction.findOrInsert(TypeCache.java:399)
-        at net.bytebuddy.TypeCache.findOrInsert(TypeCache.java:190)
-        at net.bytebuddy.TypeCache$WithInlineExpunction.findOrInsert(TypeCache.java:410)
-        at org.mockito.internal.creation.bytebuddy.TypeCachingBytecodeGenerator.mockClass(TypeCachingBytecodeGenerator.java:75)
-        at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.createMockType(InlineDelegateByteBuddyMockMaker.java:414)
-        at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.doCreateMock(InlineDelegateByteBuddyMockMaker.java:373)
-        at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.createMock(InlineDelegateByteBuddyMockMaker.java:352)
-        at org.mockito.internal.creation.bytebuddy.InlineByteBuddyMockMaker.createMock(InlineByteBuddyMockMaker.java:56)
-        at org.mockito.internal.util.MockUtil.createMock(MockUtil.java:99)
-        at org.mockito.internal.MockitoCore.mock(MockitoCore.java:84)
-        at org.mockito.Mockito.mock(Mockito.java:2104)
-        at org.mockito.internal.configuration.MockAnnotationProcessor.processAnnotationForMock(MockAnnotationProcessor.java:79)
-        at org.mockito.internal.configuration.MockAnnotationProcessor.process(MockAnnotationProcessor.java:28)
-        at org.mockito.internal.configuration.MockAnnotationProcessor.process(MockAnnotationProcessor.java:25)
-        at org.mockito.internal.configuration.IndependentAnnotationEngine.createMockFor(IndependentAnnotationEngine.java:44)
-        at org.mockito.internal.configuration.IndependentAnnotationEngine.process(IndependentAnnotationEngine.java:72)
-        at org.mockito.internal.configuration.InjectingAnnotationEngine.processIndependentAnnotations(InjectingAnnotationEngine.java:62)
-        at org.mockito.internal.configuration.InjectingAnnotationEngine.process(InjectingAnnotationEngine.java:47)
-        at org.mockito.MockitoAnnotations.openMocks(MockitoAnnotations.java:81)
-        at org.mockito.internal.framework.DefaultMockitoSession.<init>(DefaultMockitoSession.java:43)
-        at org.mockito.internal.session.DefaultMockitoSessionBuilder.startMocking(DefaultMockitoSessionBuilder.java:83)
-        ... 3 more
-Caused by: java.lang.IllegalArgumentException: Java 25 (69) is not supported by the current version of Byte Buddy which officially supports Java 22 (66) - update Byte Buddy or set net.bytebuddy.experimental as a VM property
-        at net.bytebuddy.utility.OpenedClassReader.of(OpenedClassReader.java:100)
-        at net.bytebuddy.dynamic.scaffold.TypeWriter$Default$ForInlining.create(TypeWriter.java:4011)
-        at net.bytebuddy.dynamic.scaffold.TypeWriter$Default.make(TypeWriter.java:2224)
-        at net.bytebuddy.dynamic.DynamicType$Builder$AbstractBase$UsingTypeWriter.make(DynamicType.java:4055)
-        at net.bytebuddy.dynamic.DynamicType$Builder$AbstractBase.make(DynamicType.java:3739)
-        at org.mockito.internal.creation.bytebuddy.InlineBytecodeGenerator.transform(InlineBytecodeGenerator.java:402)
-        at java.instrument/java.lang.instrument.ClassFileTransformer.transform(ClassFileTransformer.java:257)
-        at java.instrument/sun.instrument.TransformerManager.transform(TransformerManager.java:188)
-        at java.instrument/sun.instrument.InstrumentationImpl.transform(InstrumentationImpl.java:594)
-        at java.instrument/sun.instrument.InstrumentationImpl.retransformClasses0(Native Method)
-        at java.instrument/sun.instrument.InstrumentationImpl.retransformClasses(InstrumentationImpl.java:221)
-        at org.mockito.internal.creation.bytebuddy.InlineBytecodeGenerator.triggerRetransformation(InlineBytecodeGenerator.java:281)
-        ... 27 more
-
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by net.bytebuddy.dynamic.loading.ClassInjector$UsingUnsafe$Dispatcher$CreationAction (file:/Users/gustaf/.m2/repository/net/bytebuddy/byte-buddy/1.14.12/byte-buddy-1.14.12.jar)
+WARNING: Please consider reporting this to the maintainers of class net.bytebuddy.dynamic.loading.ClassInjector$UsingUnsafe$Dispatcher$CreationAction
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.473 s -- in com.audit.pki.services.CertificateServiceTest
 [INFO] 
 [INFO] Results:
 [INFO] 
-[ERROR] Errors: 
-[ERROR]   CertificateServiceTest.testIngestCertificate_MapsAndSavesSuccessfully » Mockito 
-Mockito cannot mock this class: class com.audit.pki.repos.implementations.CertificateRepository.
-
-If you're not sure why you're getting this error, please open an issue on GitHub.
-
-
-Java               : 25
-JVM vendor name    : Eclipse Adoptium
-JVM vendor version : 25.0.3+9-LTS
-JVM name           : OpenJDK 64-Bit Server VM
-JVM version        : 25.0.3+9-LTS
-JVM info           : mixed mode, sharing
-OS name            : Mac OS X
-OS version         : 15.7.2
-
-
-You are seeing this disclaimer because Mockito is configured to create inlined mocks.
-You can learn about inline mocks and their limitations under item #39 of the Mockito class javadoc.
-
-Underlying exception : org.mockito.exceptions.base.MockitoException: Could not modify all classes [class com.audit.pki.repos.implementations.CertificateRepository, interface com.audit.pki.repos.interfaces.CertificateRepoInterface, class java.lang.Object]
-[INFO] 
-[ERROR] Tests run: 11, Failures: 0, Errors: 1, Skipped: 0
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
 [INFO] 
 [INFO] ------------------------------------------------------------------------
-[INFO] BUILD FAILURE
+[INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  1.199 s
-[INFO] Finished at: 2026-06-13T17:50:26+02:00
+[INFO] Total time:  1.974 s
+[INFO] Finished at: 2026-06-15T14:30:10+02:00
 [INFO] ------------------------------------------------------------------------
-[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.2.5:test (default-test) on project certificate-audit-layer: 
-[ERROR] 
-[ERROR] Please refer to /Users/gustaf/Dev/PKI/certificate-audit-layer/target/surefire-reports for the individual test results.
-[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
-[ERROR] -> [Help 1]
-[ERROR] 
-[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
-[ERROR] Re-run Maven using the -X switch to enable full debug logging.
-[ERROR] 
-[ERROR] For more information about the errors and possible solutions, please read the following articles:
-[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
