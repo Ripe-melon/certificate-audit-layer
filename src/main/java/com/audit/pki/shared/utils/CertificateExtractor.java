@@ -21,7 +21,7 @@ public class CertificateExtractor {
      * 
      * @return A list of extracted domain names, or an empty list if none exist.
      * @throws AuditParsingException If the SANs cannot be parsed from the
-     *                                     certificate.
+     *                               certificate.
      */
     public static List<String> extractSanList(X509Certificate cert) {
         List<String> sanList = new ArrayList<>();
@@ -75,8 +75,8 @@ public class CertificateExtractor {
 
             return hexString.toString();
         } catch (NoSuchAlgorithmException e) {
-            // Wrap the native checked exception in our custom domain exception
-            throw new CertificateValidationException("Invalid Algorithm: SHA-256 is not supported.");
+            // Include 'e' to preserve the stack trace!
+            throw new AuditParsingException("Fatal system error: JVM does not support SHA-256.", e);
         }
     }
 
