@@ -6,6 +6,8 @@ import com.audit.pki.services.interfaces.ComplianceValidator.AuditReport;
 import com.audit.pki.services.implementations.Nis2BaselineValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -104,5 +106,113 @@ public class Nis2BaselineValidatorTest {
         assertFalse(report.isCompliant());
         assertEquals(1, report.violations().size());
         assertTrue(report.violations().get(0).contains("NIS2/CAB baseline maximum"));
+    }
+
+    @ParameterizedTest(name = "Lifespan of {0} days should have compliance: {1}")
+    @CsvSource({
+            "397, true", // Just under the limit
+            "398, true", // Exactly on the boundary limit
+            "399, false" // Just over the limit (Poison pill)
+    })
+    void testLifespanUpperBoundaries(int daysToTest, boolean expectedCompliance) {
+        // Arrange: Create a certificate that lives for exactly 'daysToTest' days
+        Certificate boundaryCert = createTestCertificate(
+                now,
+                now.plus(daysToTest, ChronoUnit.DAYS),
+                "RSA", 2048, "SHA256withRSA");
+
+        // Act
+        AuditReport report = validator.evaluate(boundaryCert);
+
+        // Assert: We don't hardcode true/false, we use the parameter!
+        assertEquals(expectedCompliance, report.isCompliant(),
+                "Compliance check failed for lifespan of " + daysToTest + " days.");
+    }
+
+    @ParameterizedTest(name = "Lifespan of {0} days should result in compliance: {1}")
+    @CsvSource({
+            "-1, false",
+            "0, false",
+            "1, true"
+    })
+    void testLifespanLowerBoundaries(int daysToTest, boolean expectedCompliance) {
+        // Arrange: Start the cert 12 hours ago so it is currently active.
+        Instant activeStart = now.minus(12, ChronoUnit.HOURS);
+
+        // Add the test lifespan (e.g., if daysToTest is 1, it ends 12 hours from now)
+        Instant testEnd = activeStart.plus(daysToTest, ChronoUnit.DAYS);
+
+        Certificate boundaryCert = createTestCertificate(
+                activeStart, testEnd,
+                "RSA", 2048, "SHA256withRSA");
+
+        // Act
+        AuditReport report = validator.evaluate(boundaryCert);
+
+        // Assert
+        assertEquals(expectedCompliance, report.isCompliant(),
+                "Compliance check failed for lifespan of " + daysToTest + " days.");
+    }
+
+    @ParameterizedTest(name = "Expires in {0} days should trigger warning: {1}")
+    @CsvSource({
+            "29, true", // Inside the warning window
+            "30, true", // Exactly on the boundary
+            "31, false" // Just outside the warning window
+    })
+    void testExpirationWarningBoundaries(int daysUntilExpiration, boolean expectWarning) {
+
+        // Arrange: Start the cert 10 days ago.
+        Instant start = now.minus(10, ChronoUnit.DAYS);
+
+        // Add the test days, PLUS 1 minute of padding to defeat execution delays
+        Instant end = now.plus(daysUntilExpiration, ChronoUnit.DAYS).plus(1, ChronoUnit.MINUTES);
+
+        Certificate cert = createTestCertificate(start, end, "RSA", 2048, "SHA256withRSA");
+
+        // Act
+        AuditReport report = validator.evaluate(cert);
+
+        // Assert: The cert is COMPLIANT, but the warnings list should change based on
+        // the parameter
+        assertTrue(report.isCompliant(), "Certificate should remain compliant despite warnings.");
+        assertEquals(expectWarning, !report.warnings().isEmpty(),
+                "Warning logic failed for expiration in " + daysUntilExpiration + " days.");
+    }
+
+    @ParameterizedTest(name = "RSA Key Size of {0} bits should be compliant: {1}")
+    @CsvSource({
+            "2047, false", // Just under the mathematical boundary
+            "2048, true", // Exactly on the baseline boundary
+            "4096, true" // Well over the boundary
+    })
+    void testRsaKeySizeBoundaries(int keySize, boolean expectedCompliance) {
+        // Arrange: Use a safe timeline, only alter the key size
+        Certificate cert = createTestCertificate(
+                now.minus(10, ChronoUnit.DAYS),
+                now.plus(90, ChronoUnit.DAYS),
+                "RSA", keySize, "SHA256withRSA");
+
+        // Act
+        AuditReport report = validator.evaluate(cert);
+
+        // Assert
+        assertEquals(expectedCompliance, report.isCompliant(),
+                "RSA key size boundary failed for size: " + keySize);
+    }
+
+    @Test
+    void testEllipticCurveBypassesRsaSizeLimit() {
+        // Arrange: 256 bits is a CRITICAL failure for RSA, but highly secure for ECDSA
+        Certificate ecCert = createTestCertificate(
+                now.minus(10, ChronoUnit.DAYS),
+                now.plus(90, ChronoUnit.DAYS),
+                "ECDSA", 256, "SHA256withECDSA");
+
+        // Act
+        AuditReport report = validator.evaluate(ecCert);
+
+        // Assert
+        assertTrue(report.isCompliant(), "Elliptic Curve algorithms should not be blocked by the RSA size limit.");
     }
 }

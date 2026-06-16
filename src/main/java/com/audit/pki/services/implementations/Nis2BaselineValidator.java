@@ -54,12 +54,13 @@ public class Nis2BaselineValidator implements ComplianceValidator {
         // RULE 3: Does it violate the 398-day maximum lifespan?
 
         long lifespanDays = ChronoUnit.DAYS.between(validFrom, validTo);
-        if (lifespanDays > MAX_LIFESPAN_DAYS) {
+        if (lifespanDays <= 0) {
+            violations.add("INVALID: Certificate lifespan must be at least 1 day.");
+        } else if (lifespanDays > MAX_LIFESPAN_DAYS) {
             violations.add(String.format(
                     "COMPLIANCE VIOLATION: Certificate lifespan is %d days. NIS2/CAB baseline maximum is %d days.",
                     lifespanDays, MAX_LIFESPAN_DAYS));
         }
-
         // RULE 4: Is it expiring soon? (Only check if not already expired)
         if (validTo.isAfter(now)) {
             long daysUntilExpiration = ChronoUnit.DAYS.between(now, validTo);
