@@ -21,6 +21,11 @@ public class Nis2BaselineValidator implements ComplianceValidator {
         List<String> violations = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
 
+        if (certificate == null) {
+            violations.add("CRITICAL: The provided certificate object is null and cannot be evaluated.");
+            return new AuditReport(false, violations, warnings);
+        }
+
         // 1. Run Chronological Checks
         validateLifespan(certificate, violations, warnings);
 
@@ -38,6 +43,11 @@ public class Nis2BaselineValidator implements ComplianceValidator {
         Instant now = Instant.now();
         Instant validFrom = certificate.getValidFrom();
         Instant validTo = certificate.getValidTo();
+
+        if (validFrom == null || validTo == null) {
+            violations.add("CRITICAL: Certificate is missing required validity timestamps.");
+            return; // Exit safely before calling .isBefore() or ChronoUnit math
+        }
 
         // RULE 1: Is the certificate already expired?
 
@@ -75,8 +85,13 @@ public class Nis2BaselineValidator implements ComplianceValidator {
 
     private void validateKeyStrength(Certificate certificate, List<String> violations) {
         String keyAlg = certificate.getKeyAlgorithm();
-        int keySize = certificate.getKeySize();
 
+        if (keyAlg == null || keyAlg.trim().isEmpty()) {
+            violations.add("CRITICAL: Certificate is missing a public key algorithm.");
+            return;
+        }
+
+        int keySize = certificate.getKeySize();
         if ("RSA".equalsIgnoreCase(keyAlg) && keySize < 2048) {
             violations.add(String.format(
                     "CRITICAL: Certificate uses an insecure RSA key size of %d bits (Minimum is 2048).",
@@ -85,8 +100,16 @@ public class Nis2BaselineValidator implements ComplianceValidator {
     }
 
     private void validateSignatureAlgorithm(Certificate certificate, List<String> violations) {
-        String sigAlg = certificate.getSignatureAlgorithm().toUpperCase();
+        String rawSigAlg = certificate.getSignatureAlgorithm();
 
+        // 1. The Defensive Shield: Catch nulls and empty strings immediately
+        if (rawSigAlg == null || rawSigAlg.trim().isEmpty()) {
+            violations.add("CRITICAL: Certificate is missing a signature algorithm.");
+            return; // Exit the method safely before we try to call .toUpperCase()
+        }
+
+        // 2. The Standard Math: Now it is safe to process
+        String sigAlg = rawSigAlg.toUpperCase();
         if (sigAlg.contains("MD5") || sigAlg.contains("SHA1")) {
             violations.add("CRITICAL: Certificate uses a compromised signature algorithm: " + sigAlg);
         }
