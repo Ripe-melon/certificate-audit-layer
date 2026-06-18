@@ -21,6 +21,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 
 public class CertificateService implements CertificateServiceInterface {
 
@@ -43,7 +44,7 @@ public class CertificateService implements CertificateServiceInterface {
     public Certificate ingestCertificate(byte[] rawCertBytes) {
         X509Certificate x509 = parseToX509(rawCertBytes);
         try {
-            Certificate auditedCertificate = new Certificate(
+            Certificate certificate = new Certificate(
                     x509.getSerialNumber().toString(),
                     CertificateExtractor.calculateSha256Thumbprint(x509.getEncoded()),
                     x509.getSubjectX500Principal().getName(),
@@ -57,17 +58,35 @@ public class CertificateService implements CertificateServiceInterface {
                     CertificateExtractor.extractExtendedKeyUsages(x509),
                     Base64.getEncoder().encodeToString(rawCertBytes));
 
-            // 1. Save the initial UNAUDITED state to satisfy the Foreign Key
-            certificateRepository.saveCertificate(auditedCertificate);
+            // 3. Save to the database and capture the TRUE UUID
+            // (Using the updated saveCertificate method that returns UUID)
+            UUID trueId = certificateRepository.saveCertificate(certificate);
 
-            // 2. Immediately run the Day-Zero Audit
-            performAudit(auditedCertificate);
+            // 4. Resolve the "Identity Crisis" WITHOUT using a Setter
+            if (!trueId.equals(certificate.getId())) {
+                // If the IDs don't match, it means this was a duplicate and PostgreSQL
+                // kept the old ID. Since we refuse to use setId() to protect the domain model,
+                // we MUST fetch the correct, existing object from the database.
 
-            return auditedCertificate;
+                // Note: You will need a quick findById method in your repository for this!
+                certificate = certificateRepository.getCertificateById(trueId);
+            }
+
+            // 5. Perform the mathematical audit on the mathematically correct object
+            // Now when performAudit writes to the audit_logs table, certificate.getId() is
+            // 100% accurate.
+            performAudit(certificate);
+
+            return certificate;
 
         } catch (CertificateEncodingException e) {
             throw new AuditParsingException("Failed to encode certificate for auditing.", e);
         }
+    }
+
+    public List<Certificate> getAllCertificates() {
+        System.out.println("Service: Fetching all certificates from database...");
+        return certificateRepository.getAllCertificates();
     }
 
     @Override
@@ -106,7 +125,7 @@ public class CertificateService implements CertificateServiceInterface {
         auditLogRepository.saveAuditLog(newLog);
 
         // 7. INFRASTRUCTURE CALL B: Update the current state in PostgreSQL
-        certificateRepository.updateAuditState(certificate.getId().toString(), statusResult, auditTime);
+        certificateRepository.updateAuditState(certificate.getId(), statusResult, auditTime);
     }
 
     private X509Certificate parseToX509(byte[] rawCertBytes) {

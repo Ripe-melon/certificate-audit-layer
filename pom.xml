@@ -64,14 +64,27 @@
     </dependencies>
 
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version> <configuration>
-                    <argLine>-Dnet.bytebuddy.experimental=true</argLine>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version> 
+                    <configuration>
+                        <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.4.1</version> <configuration>
+                        <archive>
+                            <manifest>
+                                <mainClass>com.audit.pki.Application</mainClass> 
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </build>
 </project>

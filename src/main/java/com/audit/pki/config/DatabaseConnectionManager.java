@@ -21,6 +21,11 @@ public class DatabaseConnectionManager implements Database {
     @Override
     public Connection getConnection() {
         try {
+            try {
+                Class.forName("org.postgresql.Driver");
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException("PostgreSQL Driver not found in classpath!", e);
+            }
             return DriverManager.getConnection(url, user, password);
         } catch (SQLException e) {
             throw new RuntimeException("Failed to establish database connection.", e);

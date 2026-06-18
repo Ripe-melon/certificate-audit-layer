@@ -1,6 +1,8 @@
 package com.audit.pki.services.interfaces;
 
 import com.audit.pki.models.Certificate;
+
+import java.util.List;
 import java.util.UUID;
 
 public interface CertificateServiceInterface {
@@ -19,6 +21,8 @@ public interface CertificateServiceInterface {
      * Retrieves a saved certificate by its internal database ID.
      */
     Certificate getCertificateById(UUID id);
+
+    List<Certificate> getAllCertificates();
 
     void performAudit(Certificate certificate);
 }

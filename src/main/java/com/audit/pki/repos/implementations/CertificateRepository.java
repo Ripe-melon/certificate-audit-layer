@@ -46,11 +46,17 @@ public class CertificateRepository implements CertificateRepoInterface {
      * Saves a new certificate to the database.
      */
     @Override
-    public void saveCertificate(Certificate certificate) {
-        try (Connection conn = db.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(
-                        "INSERT INTO certificates (id, serial_number, thumbprint_sha256, subject_dn, issuer_dn, san_list, valid_from, valid_to, signature_algorithm, key_algorithm, key_size, extended_key_usage, is_revoked, raw_certificate, audit_status, last_audited_at) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?)")) {
+    public UUID saveCertificate(Certificate certificate) {
+        String sql = "INSERT INTO certificates (id, serial_number, thumbprint_sha256, subject_dn, issuer_dn, " +
+                "san_list, valid_from, valid_to, signature_algorithm, key_algorithm, key_size, " +
+                "extended_key_usage, is_revoked, raw_certificate, audit_status, last_audited_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?) " +
+                "ON CONFLICT (serial_number) " +
+                "DO UPDATE SET audit_status = EXCLUDED.audit_status, last_audited_at = EXCLUDED.last_audited_at " +
+                "RETURNING id";
 
+        try (Connection conn = db.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, certificate.getId());
             stmt.setString(2, certificate.getSerialNumber());
             stmt.setString(3, certificate.getThumbprintSha256());
@@ -72,7 +78,15 @@ public class CertificateRepository implements CertificateRepoInterface {
                 stmt.setNull(16, java.sql.Types.TIMESTAMP);
             }
 
-            stmt.executeUpdate();
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    // Return the true database ID (whether it was a fresh insert OR an existing
+                    // updated row)
+                    return rs.getObject("id", UUID.class);
+                } else {
+                    throw new DatabaseOperationException("Failed to save or update certificate: No ID returned.");
+                }
+            }
         } catch (SQLException e) {
             throw new DatabaseOperationException(
                     "Failed to save certificate with thumbprint: " + certificate.getThumbprintSha256(), e);
@@ -80,20 +94,25 @@ public class CertificateRepository implements CertificateRepoInterface {
     }
 
     @Override
-    public Certificate getCertificateById(String id) {
-        Certificate cert = null;
+    // In CertificateRepository.java
+    public Certificate getCertificateById(UUID id) {
+        String sql = "SELECT * FROM certificates WHERE id = ?";
+
         try (Connection conn = db.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("SELECT * FROM certificates WHERE id = ?")) {
-            stmt.setObject(1, UUID.fromString(id));
-            try (ResultSet rs = stmt.executeQuery()) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            // Pass the UUID object directly
+            pstmt.setObject(1, id);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    cert = mapRowToCertificate(rs);
+                    return mapRowToCertificate(rs); // Using your existing mapper!
                 }
             }
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to retrieve certificate with id: " + id, e);
+            throw new DatabaseOperationException("Failed to fetch certificate by ID: " + id, e);
         }
-        return cert;
+        return null;
     }
 
     @Override
@@ -189,12 +208,12 @@ public class CertificateRepository implements CertificateRepoInterface {
     }
 
     @Override
-    public List<String> getCertificateExtendedKeyUsage(String id) {
+    public List<String> getCertificateExtendedKeyUsage(UUID id) {
         List<String> extendedKeyUsages = new ArrayList<>();
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn
                         .prepareStatement("SELECT extended_key_usage FROM certificates WHERE id = ?")) {
-            stmt.setObject(1, UUID.fromString(id));
+            stmt.setObject(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     extendedKeyUsages.addAll(gson.fromJson(rs.getString("extended_key_usage"), listType));
@@ -260,28 +279,28 @@ public class CertificateRepository implements CertificateRepoInterface {
     }
 
     @Override
-    public int updateCertificate(String id, Certificate certificate) {
-        int rowsAffected = 0;
-        try (Connection conn = db.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE certificates SET is_revoked = ?, audit_status = ? WHERE id = ? ")) {
-            stmt.setBoolean(1, certificate.isRevoked());
-            stmt.setString(2, certificate.getAuditStatus());
-            stmt.setObject(3, UUID.fromString(id));
+    public int updateCertificate(UUID id, Certificate cert) {
+        String sql = "UPDATE certificates SET is_revoked = ?, audit_status = ? WHERE id = ?";
 
-            rowsAffected = stmt.executeUpdate();
+        try (Connection conn = db.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setBoolean(1, cert.isRevoked());
+            pstmt.setString(2, cert.getAuditStatus());
+            pstmt.setObject(3, id);
+
+            return pstmt.executeUpdate();
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to update certificate with id: " + id, e);
+            throw new DatabaseOperationException("Failed to update certificate ID: " + id, e);
         }
-        return rowsAffected;
     }
 
     @Override
-    public int deleteCertificate(String id) {
+    public int deleteCertificate(UUID id) {
         int rowsAffected = 0;
         try (Connection conn = db.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("DELETE FROM certificates WHERE id = ?")) {
-            stmt.setObject(1, UUID.fromString(id));
+            stmt.setObject(1, id);
             rowsAffected = stmt.executeUpdate();
         } catch (SQLException e) {
             throw new DatabaseOperationException("Failed to delete certificate with id: " + id, e);
@@ -290,18 +309,19 @@ public class CertificateRepository implements CertificateRepoInterface {
     }
 
     @Override
-    public void updateAuditState(String id, String auditStatus, Instant lastAuditedAt) {
+    public void updateAuditState(UUID id, String status, Instant auditedAt) {
+        String sql = "UPDATE certificates SET audit_status = ?, last_audited_at = ? WHERE id = ?";
+
         try (Connection conn = db.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE certificates SET audit_status = ?, last_audited_at = ? WHERE id = ?")) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, auditStatus);
-            stmt.setTimestamp(2, java.sql.Timestamp.from(lastAuditedAt));
-            stmt.setObject(3, UUID.fromString(id));
+            pstmt.setString(1, status);
+            pstmt.setTimestamp(2, java.sql.Timestamp.from(auditedAt));
+            pstmt.setObject(3, id);
 
-            stmt.executeUpdate();
+            pstmt.executeUpdate();
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to update audit state for certificate id: " + id, e);
+            throw new DatabaseOperationException("Failed to fast-update audit state for ID: " + id, e);
         }
     }
 

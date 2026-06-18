@@ -2,14 +2,15 @@ package com.audit.pki.repos.interfaces;
 
 import java.util.List;
 import java.time.Instant;
+import java.util.UUID;
 
 import com.audit.pki.models.Certificate;
 
 public interface CertificateRepoInterface {
 
-     void saveCertificate(Certificate certificate);
+     UUID saveCertificate(Certificate certificate);
 
-     Certificate getCertificateById(String id);
+     Certificate getCertificateById(UUID id);
 
      Certificate getCertificateBySerialNumber(String serialNumber);
 
@@ -21,7 +22,7 @@ public interface CertificateRepoInterface {
 
      List<Certificate> getCertificatesByDomain(String domain);
 
-     List<String> getCertificateExtendedKeyUsage(String id);
+     List<String> getCertificateExtendedKeyUsage(UUID id);
 
      List<Certificate> getAllCertificates();
 
@@ -29,10 +30,10 @@ public interface CertificateRepoInterface {
 
      List<Certificate> getCertificatesExpiringWithinDays(int days);
 
-     int updateCertificate(String id, Certificate certificate);
+     int updateCertificate(UUID id, Certificate certificate);
 
-     int deleteCertificate(String id);
+     int deleteCertificate(UUID id);
 
-     void updateAuditState(String id, String auditStatus, Instant lastAuditedAt);
+     void updateAuditState(UUID id, String auditStatus, Instant lastAuditedAt);
 
 }

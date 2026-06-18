@@ -64,6 +64,13 @@ public class CertificateServiceTest {
         AuditReport dummyReport = new AuditReport(true, List.of(), List.of());
         when(validator.evaluate(any(Certificate.class))).thenReturn(dummyReport);
 
+        // NEW Arrange: Teach the mock repository to act like a real database and return
+        // the ID!
+        when(certificateRepository.saveCertificate(any(Certificate.class))).thenAnswer(invocation -> {
+            Certificate certToSave = invocation.getArgument(0);
+            return certToSave.getId(); // Return the generated UUID, satisfying the trueId variable
+        });
+
         // Act: Run the orchestration method (Ingest -> Save -> Audit -> Save Log ->
         // Update State)
         Certificate result = certificateService.ingestCertificate(rawCertBytes);
@@ -90,7 +97,7 @@ public class CertificateServiceTest {
 
         // Step D: Did we update the certificate state in the database?
         verify(certificateRepository, times(1)).updateAuditState(
-                eq(result.getId().toString()),
+                eq(result.getId()),
                 eq("COMPLIANT"),
                 any(Instant.class));
     }
