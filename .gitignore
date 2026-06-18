@@ -5,15 +5,42 @@ pom.xml.releaseBackup
 pom.xml.versionsBackup
 pom.xml.next
 
-# Compiled class files & archives
+# Compiled class files
 *.class
 *.jar
 *.war
 *.ear
 
+# Logs
+*.log
+logs/
+
 # VS Code
 .vscode/
 *.code-workspace
 
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
 # OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Ignore personal certificates (Force-add your test certs if needed)
+*.cer
