@@ -47,12 +47,16 @@ public class CertificateRepository implements CertificateRepoInterface {
      */
     @Override
     public UUID saveCertificate(Certificate certificate) {
-        String sql = "INSERT INTO certificates (id, serial_number, thumbprint_sha256, subject_dn, issuer_dn, " +
-                "san_list, valid_from, valid_to, signature_algorithm, key_algorithm, key_size, " +
-                "extended_key_usage, is_revoked, raw_certificate, audit_status, last_audited_at) " +
-                "VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?) " +
-                "ON CONFLICT (serial_number) " +
-                "DO UPDATE SET audit_status = EXCLUDED.audit_status, last_audited_at = EXCLUDED.last_audited_at " +
+        String sql = "INSERT INTO certificates (id, serial_number, thumbprint_sha256, subject_dn, " +
+                "issuer_dn, san_list, valid_from, valid_to, signature_algorithm, key_algorithm, " +
+                "key_size, extended_key_usage, is_revoked, raw_certificate, audit_status, " +
+                "template_name, system_owner, deployment_method) " + // <-- Added columns
+                "VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?) " +
+                "ON CONFLICT (serial_number) DO UPDATE SET " +
+                "audit_status = EXCLUDED.audit_status, " +
+                "last_audited_at = EXCLUDED.last_audited_at, " +
+                "template_name = EXCLUDED.template_name, " +
+                "system_owner = EXCLUDED.system_owner " +
                 "RETURNING id";
 
         try (Connection conn = db.getConnection();
@@ -72,6 +76,9 @@ public class CertificateRepository implements CertificateRepoInterface {
             stmt.setBoolean(13, certificate.isRevoked());
             stmt.setString(14, certificate.getRawCertificateString());
             stmt.setString(15, certificate.getAuditStatus());
+            stmt.setString(16, certificate.getTemplateName());
+            stmt.setString(17, certificate.getSystemOwner());
+            stmt.setString(18, certificate.getDeploymentMethod());
             if (certificate.getLastAuditedAt() != null) {
                 stmt.setTimestamp(16, java.sql.Timestamp.from(certificate.getLastAuditedAt()));
             } else {
@@ -279,6 +286,24 @@ public class CertificateRepository implements CertificateRepoInterface {
     }
 
     @Override
+    public List<Certificate> getCertificatesBySystemOwner(String systemOwner) {
+        String sql = "SELECT * FROM certificates WHERE system_owner = ?";
+        List<Certificate> certificates = new ArrayList<>();
+        try (Connection conn = db.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, systemOwner);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    certificates.add(mapRowToCertificate(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to fetch certificates for owner: " + systemOwner, e);
+        }
+        return certificates;
+    }
+
+    @Override
     public int updateCertificate(UUID id, Certificate cert) {
         String sql = "UPDATE certificates SET is_revoked = ?, audit_status = ? WHERE id = ?";
 
@@ -325,7 +350,7 @@ public class CertificateRepository implements CertificateRepoInterface {
         }
     }
 
-    // Helper method to map a ResultSet row to a Certificate object
+    // Helper method to convert a ResultSet row to a Certificate object
     private Certificate mapRowToCertificate(ResultSet rs) throws SQLException {
 
         UUID id = rs.getObject("id", UUID.class);
@@ -347,9 +372,15 @@ public class CertificateRepository implements CertificateRepoInterface {
         java.sql.Timestamp ts = rs.getTimestamp("last_audited_at");
         Instant lastAuditedAt = ts != null ? ts.toInstant() : null;
 
+        // --- NEW EXTRACTIONS ---
+        String templateName = rs.getString("template_name");
+        String systemOwner = rs.getString("system_owner");
+        String deploymentMethod = rs.getString("deployment_method");
+
+        // Use the updated rehydration constructor
         return new Certificate(id, serialNumber, thumbprintSha256, subjectDn, issuerDn, sanList, validFrom, validTo,
                 signatureAlgorithm, keyAlgorithm, keySize, extendedKeyUsage, isRevoked, rawCertificateString,
-                auditStatus, lastAuditedAt);
+                auditStatus, lastAuditedAt, templateName, systemOwner, deploymentMethod);
     }
 
 }

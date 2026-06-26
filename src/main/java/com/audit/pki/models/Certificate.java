@@ -29,6 +29,10 @@ public class Certificate {
     private String auditStatus;
     private Instant lastAuditedAt;
 
+    private String templateName;
+    private String systemOwner;
+    private String deploymentMethod;
+
     /**
      * Standard constructor for creating a NEW certificate in the application.
      * Auto-generates the UUID and defaults status to UNAUDITED and isRevoked to
@@ -37,53 +41,65 @@ public class Certificate {
     public Certificate(String serialNumber, String thumbprintSha256, String subjectDn,
             String issuerDn, List<String> subjectAlternativeNames, Instant validFrom,
             Instant validTo, String signatureAlgorithm, String keyAlgorithm,
-            int keySize, List<String> extendedKeyUsages, String rawCertificateString) {
+            int keySize, List<String> extendedKeyUsages, String rawCertificateString,
+            String templateName, String systemOwner, String deploymentMethod) { // <-- Added parameters
+
         this.id = UUID.randomUUID();
         this.serialNumber = serialNumber;
         this.thumbprintSha256 = thumbprintSha256;
         this.subjectDn = subjectDn;
         this.issuerDn = issuerDn;
-        // Creating defensive copies of the lists to prevent external mutability
-        this.subjectAlternativeNames = subjectAlternativeNames != null ? new ArrayList<>(subjectAlternativeNames)
-                : new ArrayList<>();
+        this.subjectAlternativeNames = new ArrayList<>(subjectAlternativeNames);
         this.validFrom = validFrom;
         this.validTo = validTo;
         this.signatureAlgorithm = signatureAlgorithm;
         this.keyAlgorithm = keyAlgorithm;
         this.keySize = keySize;
-        this.extendedKeyUsages = extendedKeyUsages != null ? new ArrayList<>(extendedKeyUsages) : new ArrayList<>();
-        this.isRevoked = false;
+        this.extendedKeyUsages = new ArrayList<>(extendedKeyUsages);
         this.rawCertificateString = rawCertificateString;
+
         this.auditStatus = "UNAUDITED";
-        this.lastAuditedAt = null;
+        this.isRevoked = false;
+
+        // --- NEW ASSIGNMENTS ---
+        this.templateName = templateName;
+        this.systemOwner = systemOwner;
+        this.deploymentMethod = deploymentMethod;
     }
 
     /**
-     * Full constructor for reconstructing an EXISTING certificate from the
-     * database.
+     * Rehydration constructor used by the Repository to rebuild an EXISTING
+     * certificate from PostgreSQL.
+     * Takes the explicit ID and Status rather than generating them.
      */
     public Certificate(UUID id, String serialNumber, String thumbprintSha256, String subjectDn,
             String issuerDn, List<String> subjectAlternativeNames, Instant validFrom,
             Instant validTo, String signatureAlgorithm, String keyAlgorithm,
-            int keySize, List<String> extendedKeyUsages, boolean isRevoked,
-            String rawCertificateString, String auditStatus, Instant lastAuditedAt) {
+            int keySize, List<String> extendedKeyUsages, boolean isRevoked, String rawCertificateString,
+            String auditStatus, Instant lastAuditedAt,
+            String templateName, String systemOwner, String deploymentMethod) { // <-- Added parameters
+
         this.id = id;
         this.serialNumber = serialNumber;
         this.thumbprintSha256 = thumbprintSha256;
         this.subjectDn = subjectDn;
         this.issuerDn = issuerDn;
-        this.subjectAlternativeNames = subjectAlternativeNames != null ? new ArrayList<>(subjectAlternativeNames)
-                : new ArrayList<>();
+        this.subjectAlternativeNames = new ArrayList<>(subjectAlternativeNames);
         this.validFrom = validFrom;
         this.validTo = validTo;
         this.signatureAlgorithm = signatureAlgorithm;
         this.keyAlgorithm = keyAlgorithm;
         this.keySize = keySize;
-        this.extendedKeyUsages = extendedKeyUsages != null ? new ArrayList<>(extendedKeyUsages) : new ArrayList<>();
+        this.extendedKeyUsages = new ArrayList<>(extendedKeyUsages);
         this.isRevoked = isRevoked;
         this.rawCertificateString = rawCertificateString;
         this.auditStatus = auditStatus;
         this.lastAuditedAt = lastAuditedAt;
+
+        // --- NEW ASSIGNMENTS ---
+        this.templateName = templateName;
+        this.systemOwner = systemOwner;
+        this.deploymentMethod = deploymentMethod;
     }
 
     public Instant getLastAuditedAt() {
@@ -152,12 +168,30 @@ public class Certificate {
         return auditStatus;
     }
 
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public String getSystemOwner() {
+        return systemOwner;
+    }
+
+    public String getDeploymentMethod() {
+        return deploymentMethod;
+    }
+
     // --- Setters ---
     // Note: A rich domain model usually restricts setters to prevent invalid
     // states.
     // We only expose setters for fields that realistically change post-creation.
+
     public void setRevoked(boolean revoked) {
         isRevoked = revoked;
+    }
+
+    // Allow updating the system owner if they discover it later
+    public void setSystemOwner(String systemOwner) {
+        this.systemOwner = systemOwner;
     }
 
     public void setAuditStatus(String auditStatus) {

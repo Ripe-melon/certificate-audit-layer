@@ -30,6 +30,8 @@ public interface CertificateRepoInterface {
 
      List<Certificate> getCertificatesExpiringWithinDays(int days);
 
+     List<Certificate> getCertificatesBySystemOwner(String systemOwner);
+
      int updateCertificate(UUID id, Certificate certificate);
 
      int deleteCertificate(UUID id);

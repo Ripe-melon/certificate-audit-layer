@@ -45,42 +45,74 @@ public class Nis2BaselineValidator implements ComplianceValidator {
         Instant validTo = certificate.getValidTo();
 
         if (validFrom == null || validTo == null) {
-            violations.add("CRITICAL: Certificate is missing required validity timestamps.");
-            return; // Exit safely before calling .isBefore() or ChronoUnit math
+            violations.add("CRITICAL: Certificate is missing validFrom or validTo timestamps.");
+            return; // Exit early to prevent math errors!
         }
 
-        // RULE 1: Is the certificate already expired?
+        // 1. Dynamic Policy Lookup: Ask the engine what the limit is for THIS specific
+        // certificate
+        int allowedLifespanDays = determineAllowedLifespan(certificate.getTemplateName());
 
-        if (validTo.isBefore(now)) {
-            violations.add("CRITICAL: Certificate has expired. Expiration date was: " + validTo);
-        }
-
-        // RULE 2: Is the certificate active yet?
-
-        if (validFrom.isAfter(now)) {
-            violations.add("INVALID: Certificate 'validFrom' date is in the future: " + validFrom);
-        }
-
-        // RULE 3: Does it violate the 398-day maximum lifespan?
-
+        // 2. Calculate the actual mathematical lifespan
         long lifespanDays = ChronoUnit.DAYS.between(validFrom, validTo);
+
         if (lifespanDays <= 0) {
-            violations.add("INVALID: Certificate lifespan must be at least 1 day.");
-        } else if (lifespanDays > MAX_LIFESPAN_DAYS) {
+            violations.add("CRITICAL: Certificate lifespan must be at least 1 day.");
+        } else if (lifespanDays > allowedLifespanDays) {
+            // 3. Context-Aware Violation Message
+            String templateDisplay = (certificate.getTemplateName() != null)
+                    ? "'" + certificate.getTemplateName() + "' template"
+                    : "default baseline";
+
             violations.add(String.format(
-                    "COMPLIANCE VIOLATION: Certificate lifespan is %d days. NIS2/CAB baseline maximum is %d days.",
-                    lifespanDays, MAX_LIFESPAN_DAYS));
+                    "POLICY VIOLATION: Certificate lifespan is %d days. The %s restricts this to a maximum of %d days.",
+                    lifespanDays, templateDisplay, allowedLifespanDays));
         }
-        // RULE 4: Is it expiring soon? (Only check if not already expired)
-        if (validTo.isAfter(now)) {
+
+        // 4. Check if currently expired
+        if (validTo.isBefore(now)) {
+            violations.add("CRITICAL: Certificate has expired.");
+        } else {
+            // 5. Check warning window (approaching expiration)
             long daysUntilExpiration = ChronoUnit.DAYS.between(now, validTo);
             if (daysUntilExpiration <= EXPIRATION_WARNING_DAYS) {
                 warnings.add(String.format(
-                        "WARNING: Certificate is expiring in %d days. Rotation required.",
+                        "WARNING: Certificate expires in %d days. Renewal or rotation required.",
                         daysUntilExpiration));
             }
         }
+    }
 
+    /**
+     * A lightweight Rules Engine that mimics the company's internal PKI Policy
+     * (CP/CPS).
+     * Maps Microsoft ADCS Template names to their approved maximum lifespans.
+     */
+    private int determineAllowedLifespan(String templateName) {
+        // If no template is provided (e.g., a Public Web SSL cert), strictly enforce
+        // the NIS2 baseline
+        if (templateName == null || templateName.trim().isEmpty()) {
+            return MAX_LIFESPAN_DAYS; // 398 days
+        }
+
+        String normalizedTemplate = templateName.toLowerCase();
+
+        // ADCS Rule 1: SAP, Printers, and Wireless Auth are granted 2-year exceptions
+        if (normalizedTemplate.contains("sap") ||
+                normalizedTemplate.contains("printers") ||
+                normalizedTemplate.contains("wireless")) {
+            return 730;
+        }
+
+        // ADCS Rule 2: Citrix Smartcard Logon is highly sensitive and restricted to 1
+        // week
+        if (normalizedTemplate.contains("smartcard")) {
+            return 7;
+        }
+
+        // ADCS Rule 3: Time Stamping and modern Web SSL fallback to the standard 398
+        // days
+        return MAX_LIFESPAN_DAYS;
     }
 
     private void validateKeyStrength(Certificate certificate, List<String> violations) {

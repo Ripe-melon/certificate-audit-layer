@@ -31,12 +31,13 @@ public class Nis2BaselineValidatorTest {
          * massive constructor blocks into every single test.
          */
         private Certificate createTestCertificate(Instant validFrom, Instant validTo, String keyAlg, int keySize,
-                        String sigAlg) {
-                // Uses the Phase 2 constructor
+                        String sigAlg, String templateName) { // <-- Added templateName here
                 return new Certificate(
                                 "TEST-SERIAL", "dummy-thumbprint", "CN=Test", "CN=Issuer",
                                 List.of("test.domain.com"), validFrom, validTo, sigAlg, keyAlg, keySize,
-                                List.of("serverAuth"), "dummy-raw-string");
+                                List.of("1.3.6.1.5.5.7.3.1"), "raw_cert_string",
+                                templateName, "Test Owner", "Test Deploy" // <-- Passed here
+                );
         }
 
         @Test
@@ -46,7 +47,7 @@ public class Nis2BaselineValidatorTest {
                 Certificate validCert = createTestCertificate(
                                 now.minus(10, ChronoUnit.DAYS),
                                 now.plus(90, ChronoUnit.DAYS),
-                                "RSA", 2048, "SHA256withRSA");
+                                "RSA", 2048, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(validCert);
@@ -63,7 +64,7 @@ public class Nis2BaselineValidatorTest {
                 Certificate weakKeyCert = createTestCertificate(
                                 now.minus(10, ChronoUnit.DAYS),
                                 now.plus(90, ChronoUnit.DAYS),
-                                "RSA", 1024, "SHA256withRSA");
+                                "RSA", 1024, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(weakKeyCert);
@@ -80,7 +81,7 @@ public class Nis2BaselineValidatorTest {
                 Certificate badSigCert = createTestCertificate(
                                 now.minus(10, ChronoUnit.DAYS),
                                 now.plus(90, ChronoUnit.DAYS),
-                                "RSA", 2048, "MD5withRSA");
+                                "RSA", 2048, "MD5withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(badSigCert);
@@ -97,7 +98,7 @@ public class Nis2BaselineValidatorTest {
                 Certificate longLifeCert = createTestCertificate(
                                 now.minus(10, ChronoUnit.DAYS),
                                 now.plus(490, ChronoUnit.DAYS),
-                                "RSA", 2048, "SHA256withRSA");
+                                "RSA", 2048, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(longLifeCert);
@@ -105,7 +106,8 @@ public class Nis2BaselineValidatorTest {
                 // Assert
                 assertFalse(report.isCompliant());
                 assertEquals(1, report.violations().size());
-                assertTrue(report.violations().get(0).contains("NIS2/CAB baseline maximum"));
+                // UPDATED STRING HERE:
+                assertTrue(report.violations().get(0).contains("POLICY VIOLATION"));
         }
 
         @ParameterizedTest(name = "Lifespan of {0} days should have compliance: {1}")
@@ -119,7 +121,7 @@ public class Nis2BaselineValidatorTest {
                 Certificate boundaryCert = createTestCertificate(
                                 now,
                                 now.plus(daysToTest, ChronoUnit.DAYS),
-                                "RSA", 2048, "SHA256withRSA");
+                                "RSA", 2048, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(boundaryCert);
@@ -144,7 +146,7 @@ public class Nis2BaselineValidatorTest {
 
                 Certificate boundaryCert = createTestCertificate(
                                 activeStart, testEnd,
-                                "RSA", 2048, "SHA256withRSA");
+                                "RSA", 2048, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(boundaryCert);
@@ -168,7 +170,7 @@ public class Nis2BaselineValidatorTest {
                 // Add the test days, PLUS 1 minute of padding to defeat execution delays
                 Instant end = now.plus(daysUntilExpiration, ChronoUnit.DAYS).plus(1, ChronoUnit.MINUTES);
 
-                Certificate cert = createTestCertificate(start, end, "RSA", 2048, "SHA256withRSA");
+                Certificate cert = createTestCertificate(start, end, "RSA", 2048, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(cert);
@@ -191,7 +193,7 @@ public class Nis2BaselineValidatorTest {
                 Certificate cert = createTestCertificate(
                                 now.minus(10, ChronoUnit.DAYS),
                                 now.plus(90, ChronoUnit.DAYS),
-                                "RSA", keySize, "SHA256withRSA");
+                                "RSA", keySize, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(cert);
@@ -207,7 +209,7 @@ public class Nis2BaselineValidatorTest {
                 Certificate ecCert = createTestCertificate(
                                 now.minus(10, ChronoUnit.DAYS),
                                 now.plus(90, ChronoUnit.DAYS),
-                                "ECDSA", 256, "SHA256withECDSA");
+                                "ECDSA", 256, "SHA256withECDSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(ecCert);
@@ -227,7 +229,7 @@ public class Nis2BaselineValidatorTest {
                                 now.plus(90, ChronoUnit.DAYS),
                                 "RSA", 2048,
                                 poisonPillSig // <-- Injecting the poison pill here (null, "", " ")
-                );
+                                , null);
 
                 // Act
                 AuditReport report = validator.evaluate(corruptCert);
@@ -259,7 +261,7 @@ public class Nis2BaselineValidatorTest {
                 // missing
                 Certificate corruptDateCert = createTestCertificate(
                                 null, null,
-                                "RSA", 2048, "SHA256withRSA");
+                                "RSA", 2048, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(corruptDateCert);
@@ -268,7 +270,8 @@ public class Nis2BaselineValidatorTest {
                 assertFalse(report.isCompliant(), "System should safely reject missing timestamps.");
 
                 boolean hasTimeViolation = report.violations().stream()
-                                .anyMatch(v -> v.contains("missing required validity timestamps"));
+                                .anyMatch(v -> v.contains("missing validFrom or validTo")); // <-- Updated string!
+                assertTrue(hasTimeViolation, "Should log a missing timestamp violation.");
                 assertTrue(hasTimeViolation, "Should log a missing timestamp violation.");
         }
 
@@ -280,7 +283,7 @@ public class Nis2BaselineValidatorTest {
                 Certificate corruptCert = createTestCertificate(
                                 now.minus(10, ChronoUnit.DAYS),
                                 now.plus(90, ChronoUnit.DAYS),
-                                poisonPillAlg, 2048, "SHA256withRSA");
+                                poisonPillAlg, 2048, "SHA256withRSA", null);
 
                 // Act
                 AuditReport report = validator.evaluate(corruptCert);

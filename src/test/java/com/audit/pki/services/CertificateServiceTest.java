@@ -20,8 +20,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
@@ -84,6 +83,11 @@ public class CertificateServiceTest {
         // Assert 2: Verify the state was updated in memory before returning
         assertEquals("COMPLIANT", result.getAuditStatus());
         assertNotNull(result.getLastAuditedAt());
+
+        // Assert 2.5: Verify the new ADCS Metadata fallbacks were applied correctly
+        assertNull(result.getTemplateName(), "Template name should be null for standard API uploads");
+        assertNull(result.getSystemOwner(), "System owner should be null for standard API uploads");
+        assertEquals("Manual API Upload", result.getDeploymentMethod(), "Should default to Manual API Upload");
 
         // Assert 3: Verify the Behavioral Contract (The exact orchestration steps)
         // Step A: Did we save the initial UNAUDITED certificate?

@@ -44,8 +44,12 @@ public class CertificateRepositoryTest {
                 "SHA256withRSA",
                 "RSA",
                 2048,
-                List.of("1.3.6.1.5.5.7.3.1", "1.3.6.1.5.5.7.3.2"),
-                "base64EncodedRawCertString");
+                List.of("1.3.6.1.5.5.7.3.1"),
+                "dummy_raw_base64_string",
+                "Axfood_SAP_SSL_Certificate", // <-- NEW: templateName
+                "SAP Team", // <-- NEW: systemOwner
+                "Manual API" // <-- NEW: deploymentMethod
+        );
     }
 
     @Test
@@ -123,5 +127,19 @@ public class CertificateRepositoryTest {
 
         Certificate deleted = repository.getCertificateById(certId);
         assertNull(deleted, "Certificate should no longer exist in the database");
+    }
+
+    @Test
+    @Order(7)
+    void testGetCertificatesBySystemOwner() {
+        repository.saveCertificate(testCert);
+        // Act
+        List<Certificate> sapCerts = repository.getCertificatesBySystemOwner("SAP Team");
+        List<Certificate> emptyCerts = repository.getCertificatesBySystemOwner("NonExistentTeam");
+
+        // Assert
+        assertFalse(sapCerts.isEmpty(), "Should find the certificate owned by SAP Team");
+        assertEquals("SAP Team", sapCerts.get(0).getSystemOwner());
+        assertTrue(emptyCerts.isEmpty(), "Should return empty list for unknown owners");
     }
 }

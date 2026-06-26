@@ -40,10 +40,14 @@ public class CertificateService implements CertificateServiceInterface {
         this.gson = new Gson();
     }
 
-    @Override
-    public Certificate ingestCertificate(byte[] rawCertBytes) {
+    // --- METHOD 1: The New "Enriched" Ingestion (Used by the future CSV Handler)
+    // ---
+    public Certificate ingestCertificate(byte[] rawCertBytes, String templateName, String systemOwner,
+            String deploymentMethod) {
         X509Certificate x509 = parseToX509(rawCertBytes);
         try {
+            // Notice we are passing the new metadata variables straight into the
+            // constructor!
             Certificate certificate = new Certificate(
                     x509.getSerialNumber().toString(),
                     CertificateExtractor.calculateSha256Thumbprint(x509.getEncoded()),
@@ -56,32 +60,42 @@ public class CertificateService implements CertificateServiceInterface {
                     x509.getPublicKey().getAlgorithm(),
                     CertificateExtractor.getKeySize(x509.getPublicKey()),
                     CertificateExtractor.extractExtendedKeyUsages(x509),
-                    Base64.getEncoder().encodeToString(rawCertBytes));
+                    Base64.getEncoder().encodeToString(rawCertBytes),
+                    templateName, // <--- Passed from CSV
+                    systemOwner, // <--- Passed from CSV
+                    deploymentMethod // <--- Passed from CSV
+            );
 
-            // 3. Save to the database and capture the TRUE UUID
-            // (Using the updated saveCertificate method that returns UUID)
+            // 3. Save to database
             UUID trueId = certificateRepository.saveCertificate(certificate);
 
-            // 4. Resolve the "Identity Crisis" WITHOUT using a Setter
             if (!trueId.equals(certificate.getId())) {
-                // If the IDs don't match, it means this was a duplicate and PostgreSQL
-                // kept the old ID. Since we refuse to use setId() to protect the domain model,
-                // we MUST fetch the correct, existing object from the database.
-
-                // Note: You will need a quick findById method in your repository for this!
                 certificate = certificateRepository.getCertificateById(trueId);
+                // Optional: If this is an existing cert, you might want to update the System
+                // Owner here!
             }
 
-            // 5. Perform the mathematical audit on the mathematically correct object
-            // Now when performAudit writes to the audit_logs table, certificate.getId() is
-            // 100% accurate.
             performAudit(certificate);
-
             return certificate;
 
         } catch (CertificateEncodingException e) {
             throw new AuditParsingException("Failed to encode certificate for auditing.", e);
         }
+    }
+
+    // --- METHOD 2: The Original Ingestion (Used by the existing
+    // CertificateUploadHandler) ---
+    @Override
+    public Certificate ingestCertificate(byte[] rawCertBytes) {
+        // We simply call the enriched method above, passing nulls for the data we don't
+        // know.
+        // This keeps your codebase perfectly DRY (Don't Repeat Yourself).
+        return ingestCertificate(
+                rawCertBytes,
+                null, // templateName unknown
+                null, // systemOwner unknown
+                "Manual API Upload" // Deployment method is assumed manual via Postman/API
+        );
     }
 
     public List<Certificate> getAllCertificates() {
