@@ -1,5 +1,6 @@
 package com.audit.pki.api.server;
 
+import com.audit.pki.api.handlers.AdcsCsvUploadHandler;
 import com.audit.pki.api.handlers.CertificateListHandler;
 import com.audit.pki.api.handlers.CertificateUploadHandler;
 import com.audit.pki.services.implementations.CertificateService;
@@ -25,6 +26,7 @@ public class PkiHttpServer {
         // Map the URL path to our specific handler, passing the core service
         server.createContext("/api/v1/certificates/upload", new CertificateUploadHandler(certificateService));
         server.createContext("/api/v1/certificates", new CertificateListHandler(certificateService));
+        server.createContext("/api/v1/certificates/adcs-sync", new AdcsCsvUploadHandler(certificateService));
 
         // Use the default executor
         server.setExecutor(null);
